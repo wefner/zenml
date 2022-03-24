@@ -426,6 +426,7 @@ class KubeflowOrchestrator(BaseOrchestrator):
                 )
 
             local_deployment_utils.start_kfp_ui_daemon(
+                kubernetes_context=kubernetes_context,
                 pid_file_path=self._pid_file_path,
                 log_file_path=self.log_file,
                 port=self._get_kfp_ui_daemon_port(),
@@ -474,6 +475,7 @@ class KubeflowOrchestrator(BaseOrchestrator):
             kubernetes_context=kubernetes_context
         )
         local_deployment_utils.start_kfp_ui_daemon(
+            kubernetes_context=kubernetes_context,
             pid_file_path=self._pid_file_path,
             log_file_path=self.log_file,
             port=self._get_kfp_ui_daemon_port(),

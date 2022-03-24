@@ -352,12 +352,14 @@ def add_hostpath_to_kubeflow_pipelines(
 
 
 def start_kfp_ui_daemon(
-    pid_file_path: str, log_file_path: str, port: int
+    kubernetes_context: str, pid_file_path: str, log_file_path: str, port: int
 ) -> None:
     """Starts a daemon process that forwards ports so the Kubeflow Pipelines
     UI is accessible in the browser.
 
     Args:
+        kubernetes_context: The kubernetes context on which Kubeflow Pipelines
+            is running.
         pid_file_path: Path where the file with the daemons process ID should
             be written.
         log_file_path: Path to a file where the daemon logs should be written.
@@ -365,6 +367,8 @@ def start_kfp_ui_daemon(
     """
     command = [
         "kubectl",
+        "--context",
+        kubernetes_context,
         "--namespace",
         "kubeflow",
         "port-forward",

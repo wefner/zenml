@@ -20,6 +20,7 @@ import pandas as pd  # type: ignore [import]
 import requests  # type: ignore [import]
 import tensorflow as tf  # type: ignore [import]
 
+from zenml.integrations.constants import MLFLOW, TENSORFLOW
 from zenml.integrations.mlflow.mlflow_step_decorator import enable_mlflow
 from zenml.integrations.mlflow.services import MLFlowDeploymentService
 from zenml.integrations.mlflow.steps import mlflow_deployer_step
@@ -201,7 +202,7 @@ def predictor(
     return prediction
 
 
-@pipeline(enable_cache=True, requirements_file=requirements_file)
+@pipeline(enable_cache=True, required_integrations=[MLFLOW, TENSORFLOW])
 def continuous_deployment_pipeline(
     importer,
     normalizer,
@@ -219,7 +220,7 @@ def continuous_deployment_pipeline(
     model_deployer(deployment_decision)
 
 
-@pipeline(enable_cache=True, requirements_file=requirements_file)
+@pipeline(enable_cache=True, required_integrations=[MLFLOW, TENSORFLOW])
 def inference_pipeline(
     dynamic_importer,
     prediction_service_loader,
