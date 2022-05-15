@@ -53,6 +53,7 @@ class FlavorRegistry:
         )
         from zenml.orchestrators import LocalOrchestrator
         from zenml.secrets_managers import LocalSecretsManager
+        from zenml.log_collector import FileLogCollector
 
         default_flavors = [
             LocalOrchestrator,
@@ -66,6 +67,7 @@ class FlavorRegistry:
             GitHubContainerRegistry,
             GitLabContainerRegistry,
             LocalSecretsManager,
+            FileLogCollector
         ]
         for flavor in default_flavors:
             self._register_flavor(

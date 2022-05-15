@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         BaseExperimentTracker,
     )
     from zenml.feature_stores import BaseFeatureStore
+    from zenml.log_collector import BaseLogCollector
     from zenml.metadata_stores import BaseMetadataStore
     from zenml.model_deployers import BaseModelDeployer
     from zenml.orchestrators import BaseOrchestrator
@@ -73,6 +74,7 @@ class Stack:
         orchestrator: "BaseOrchestrator",
         metadata_store: "BaseMetadataStore",
         artifact_store: "BaseArtifactStore",
+        log_collector: "BaseLogCollector",
         container_registry: Optional["BaseContainerRegistry"] = None,
         secrets_manager: Optional["BaseSecretsManager"] = None,
         step_operator: Optional["BaseStepOperator"] = None,
@@ -90,6 +92,7 @@ class Stack:
         self._metadata_store = metadata_store
         self._artifact_store = artifact_store
         self._container_registry = container_registry
+        self._log_collector = log_collector
         self._step_operator = step_operator
         self._secrets_manager = secrets_manager
         self._feature_store = feature_store
@@ -117,6 +120,7 @@ class Stack:
         from zenml.container_registries import BaseContainerRegistry
         from zenml.experiment_trackers import BaseExperimentTracker
         from zenml.feature_stores import BaseFeatureStore
+        from zenml.log_collector import BaseLogCollector
         from zenml.metadata_stores import BaseMetadataStore
         from zenml.model_deployers import BaseModelDeployer
         from zenml.orchestrators import BaseOrchestrator
@@ -152,6 +156,12 @@ class Stack:
             container_registry, BaseContainerRegistry
         ):
             _raise_type_error(container_registry, BaseContainerRegistry)
+
+        log_collector = components.get(StackComponentType.LOG_COLLECTOR)
+        if log_collector is not None and not isinstance(
+            log_collector, BaseLogCollector
+        ):
+            _raise_type_error(log_collector, BaseLogCollector)
 
         secrets_manager = components.get(StackComponentType.SECRETS_MANAGER)
         if secrets_manager is not None and not isinstance(
@@ -193,6 +203,7 @@ class Stack:
             container_registry=container_registry,
             secrets_manager=secrets_manager,
             step_operator=step_operator,
+            log_collector=log_collector,
             feature_store=feature_store,
             model_deployer=model_deployer,
             experiment_tracker=experiment_tracker,
@@ -204,6 +215,7 @@ class Stack:
         from zenml.artifact_stores import LocalArtifactStore
         from zenml.metadata_stores import SQLiteMetadataStore
         from zenml.orchestrators import LocalOrchestrator
+        from zenml.log_collector import FileLogCollector
 
         orchestrator = LocalOrchestrator(name="default")
 
@@ -225,11 +237,14 @@ class Stack:
             name="default", uri=metadata_store_path
         )
 
+        log_collector = FileLogCollector(name="default")
+
         return cls(
             name="default",
             orchestrator=orchestrator,
             metadata_store=metadata_store,
             artifact_store=artifact_store,
+            log_collector=log_collector
         )
 
     @property
@@ -242,6 +257,7 @@ class Stack:
                 self.metadata_store,
                 self.artifact_store,
                 self.container_registry,
+                self.log_collector,
                 self.secrets_manager,
                 self.step_operator,
                 self.feature_store,
@@ -300,6 +316,11 @@ class Stack:
     def experiment_tracker(self) -> Optional["BaseExperimentTracker"]:
         """The experiment tracker of the stack."""
         return self._experiment_tracker
+
+    @property
+    def log_collector(self) -> "BaseLogCollector":
+        """The artifact store of the stack."""
+        return self._log_collector
 
     @property
     def runtime_options(self) -> Dict[str, Any]:

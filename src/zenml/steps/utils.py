@@ -27,6 +27,7 @@ from __future__ import absolute_import, division, print_function
 
 import inspect
 import json
+import logging
 import sys
 import typing
 from typing import (
@@ -60,6 +61,7 @@ from zenml.exceptions import MissingStepParameterError, StepInterfaceError
 from zenml.io import fileio
 from zenml.logger import get_logger
 from zenml.materializers.base_materializer import BaseMaterializer
+from zenml.repository import Repository
 from zenml.steps.base_step_config import BaseStepConfig
 from zenml.steps.step_context import StepContext
 from zenml.steps.step_environment import StepEnvironment
@@ -439,6 +441,12 @@ class _FunctionExecutor(BaseExecutor):
                     output_artifacts=output_artifacts,
                 )
                 function_params[arg] = context
+            elif issubclass(arg_type, logging.Logger):
+                step_logger = (Repository().active_stack
+                                           .log_collector
+                                           .get_logger(name='WWWWWAAAAHRG'))
+
+                function_params[arg] = step_logger
             else:
                 # At this point, it has to be an artifact, so we resolve
                 function_params[arg] = self.resolve_input_artifact(

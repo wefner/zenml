@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from zenml.artifacts.base_artifact import BaseArtifact
     from zenml.materializers.base_materializer import BaseMaterializer
     from zenml.metadata_stores.base_metadata_store import BaseMetadataStore
+    from zenml.log_collector.base_log_collector import BaseLogCollector
     from zenml.stack import Stack
 
 
@@ -77,6 +78,7 @@ class StepContext:
             for key in output_materializers.keys()
         }
         self._metadata_store = Repository().active_stack.metadata_store
+        self._log_collector = Repository().active_stack.log_collector
         self._stack = Repository().active_stack
 
     def _get_output(
@@ -131,6 +133,12 @@ class StepContext:
         being executed.
         """
         return self._metadata_store
+
+    @property
+    def log_collector(self) -> "BaseLogCollector":
+        """
+        """
+        return self._log_collector
 
     @property
     def stack(self) -> Optional["Stack"]:

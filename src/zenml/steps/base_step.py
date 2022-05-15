@@ -15,6 +15,7 @@
 import collections
 import inspect
 import json
+import logging
 import random
 from abc import abstractmethod
 from typing import (
@@ -90,6 +91,7 @@ class BaseStepMeta(type):
         cls.CONFIG_PARAMETER_NAME = None
         cls.CONFIG_CLASS = None
         cls.CONTEXT_PARAMETER_NAME = None
+        cls.STEP_LOGGER = None
 
         # Get the signature of the step function
         step_function_signature = inspect.getfullargspec(
@@ -157,6 +159,18 @@ class BaseStepMeta(type):
                         f"argument for a step."
                     )
                 cls.CONTEXT_PARAMETER_NAME = arg
+
+            elif issubclass(arg_type, logging.Logger):
+                if cls.STEP_LOGGER is not None:
+                    raise StepInterfaceError(
+                        f"Found multiple context arguments "
+                        f"('{cls.STEP_LOGGER}' and '{arg}') when trying to "
+                        f"create step '{name}'. Please make sure to "
+                        f"only have one `logging.Logger` as input "
+                        f"argument for a step."
+                    )
+                cls.STEP_LOGGER = arg
+
             else:
                 # Can't do any check for existing materializers right now
                 # as they might get be defined later, so we simply store the
@@ -228,6 +242,7 @@ class BaseStep(metaclass=BaseStepMeta):
     CONFIG_PARAMETER_NAME: ClassVar[Optional[str]] = None
     CONFIG_CLASS: ClassVar[Optional[Type[BaseStepConfig]]] = None
     CONTEXT_PARAMETER_NAME: ClassVar[Optional[str]] = None
+    STEP_LOGGER: ClassVar[Optional[logging.Logger]] = None
 
     PARAM_SPEC: Dict[str, Any] = {}
     INPUT_SPEC: Dict[str, Type[BaseArtifact]] = {}
