@@ -444,7 +444,7 @@ class _FunctionExecutor(BaseExecutor):
             elif issubclass(arg_type, logging.Logger):
                 step_logger = (Repository().active_stack
                                            .log_collector
-                                           .get_logger(name='WWWWWAAAAHRG'))
+                                           .get_logger(name=step_name))
 
                 function_params[arg] = step_logger
             else:
@@ -466,6 +466,7 @@ class _FunctionExecutor(BaseExecutor):
             pipeline_name=self._context.pipeline_info.id,
             pipeline_run_id=self._context.pipeline_run_id,
             step_name=getattr(self, PARAM_STEP_NAME),
+            log_collector=Repository().active_stack.log_collector
         ):
             return_values = self._FUNCTION(**function_params)
 
