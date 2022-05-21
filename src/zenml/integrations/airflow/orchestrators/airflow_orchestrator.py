@@ -96,7 +96,7 @@ class AirflowOrchestrator(BaseOrchestrator):
             }
         return {
             "schedule_interval": "@once",
-           # set the a start time in the past and disable catchup so airflow runs the dag immediately
+            # set the a start time in the past and disable catchup so airflow runs the dag immediately
             "start_date": datetime.datetime.now() - datetime.timedelta(7),
             "catchup": False,
         }
@@ -138,7 +138,7 @@ class AirflowOrchestrator(BaseOrchestrator):
         )
 
         # Dictionary mapping step names to airflow_operators. This will be needed
-        # to configure airflow operator dependencies 
+        # to configure airflow operator dependencies
         step_name_to_airflow_operator = {}
 
         for step in sorted_steps:
@@ -178,7 +178,7 @@ class AirflowOrchestrator(BaseOrchestrator):
         # Return the finished airflow dag
         return airflow_dag
 
-    @root_validator
+    @root_validator(skip_on_failure=True)
     def set_airflow_home(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         """Sets airflow home according to orchestrator UUID."""
         if "uuid" not in values:

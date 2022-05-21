@@ -99,6 +99,9 @@ class KubeflowOrchestrator(BaseOrchestrator):
             https://hub.docker.com/r/zenmldocker/zenml/
         kubeflow_pipelines_ui_port: A local port to which the KFP UI will be
             forwarded.
+        kubeflow_hostname: The hostname to use to talk to the Kubeflow Pipelines
+            API. If not set, the hostname will be derived from the Kubernetes
+            API proxy.
         kubernetes_context: Optional name of a kubernetes context to run
             pipelines in. If not set, the current active context will be used.
             You can find the active context by running `kubectl config
@@ -115,6 +118,7 @@ class KubeflowOrchestrator(BaseOrchestrator):
 
     custom_docker_base_image_name: Optional[str] = None
     kubeflow_pipelines_ui_port: int = DEFAULT_KFP_UI_PORT
+    kubeflow_hostname: Optional[str] = None
     kubernetes_context: Optional[str] = None
     synchronous: bool = False
     skip_local_validations: bool = False
@@ -139,7 +143,7 @@ class KubeflowOrchestrator(BaseOrchestrator):
         UUID."""
         return f"k3d-{KubeflowOrchestrator._get_k3d_cluster_name(uuid)}"
 
-    @root_validator
+    @root_validator(skip_on_failure=True)
     def set_default_kubernetes_context(
         cls, values: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -356,7 +360,7 @@ class KubeflowOrchestrator(BaseOrchestrator):
         """Builds a docker image for the current environment and uploads it to
         a container registry if configured.
         """
-        from zenml.utils.docker_utils import build_docker_image
+        from zenml.utils import docker_utils
 
         image_name = self.get_docker_image_name(pipeline.name)
 
@@ -364,7 +368,7 @@ class KubeflowOrchestrator(BaseOrchestrator):
 
         logger.debug("Kubeflow docker container requirements: %s", requirements)
 
-        build_docker_image(
+        docker_utils.build_docker_image(
             build_context_path=get_source_root_path(),
             image_name=image_name,
             dockerignore_path=pipeline.dockerignore_file,
@@ -377,6 +381,11 @@ class KubeflowOrchestrator(BaseOrchestrator):
 
         assert stack.container_registry  # should never happen due to validation
         stack.container_registry.push_image(image_name)
+
+        # Store the docker image digest in the runtime configuration so it gets
+        # tracked in the ZenStore
+        image_digest = docker_utils.get_image_digest(image_name) or image_name
+        runtime_configuration["docker_image"] = image_digest
 
     @staticmethod
     def _configure_container_op(container_op: dsl.ContainerOp) -> None:
@@ -605,9 +614,10 @@ class KubeflowOrchestrator(BaseOrchestrator):
                 step_name_to_container_op[step.name] = container_op
 
         # Get a filepath to use to save the finished yaml to
+        assert runtime_configuration.run_name
         fileio.makedirs(self.pipeline_directory)
         pipeline_file_path = os.path.join(
-            self.pipeline_directory, f"{pipeline.name}.yaml"
+            self.pipeline_directory, f"{runtime_configuration.run_name}.yaml"
         )
 
         # write the argo pipeline yaml
@@ -648,7 +658,10 @@ class KubeflowOrchestrator(BaseOrchestrator):
             )
 
             # upload the pipeline to Kubeflow and start it
-            client = kfp.Client(kube_context=self.kubernetes_context)
+            client = kfp.Client(
+                host=self.kubeflow_hostname,
+                kube_context=self.kubernetes_context,
+            )
             if runtime_configuration.schedule:
                 try:
                     experiment = client.get_experiment(pipeline_name)

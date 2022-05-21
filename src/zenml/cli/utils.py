@@ -19,14 +19,16 @@ import sys
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     List,
+    NoReturn,
     Optional,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
 )
-from urllib.parse import quote
 
 import click
 import yaml
@@ -94,7 +96,7 @@ def declare(
     console.print(text, style=style)
 
 
-def error(text: str) -> None:
+def error(text: str) -> NoReturn:
     """Echo an error string on the CLI.
 
     Args:
@@ -148,44 +150,67 @@ def print_table(obj: List[Dict[str, Any]], **columns: table.Column) -> None:
     column_names = [columns.get(key, key.upper()) for key in column_keys]
     rich_table = table.Table(box=box.HEAVY_EDGE, show_lines=True)
     for col_name in column_names:
-        rich_table.add_column(str(col_name), overflow="fold")
-
+        if isinstance(col_name, str):
+            rich_table.add_column(str(col_name), overflow="fold")
+        else:
+            rich_table.add_column(str(col_name.header).upper(), overflow="fold")
     for dict_ in obj:
         values = []
         for key in column_keys:
             if key is None:
                 values.append(None)
             else:
-                value = str(dict_.get(key))
-                if value == "":
-                    value = " "
-                # append the value as a link so it's accessible in the console
-                # (handle spaces and the use of '[' and ']' in markdown text)
+                value = str(dict_.get(key) or " ")
+                # escape text when square brackets are used
                 if "[" in value:
-                    lv = escape(value)
-                elif " " in value:
-                    lv = f"[link={quote(value)}]{value}[/link]"
-                else:
-                    lv = f"[link='{value}']{value}[/link]"
-                values.append(lv)
+                    value = escape(value)
+                values.append(value)
         rich_table.add_row(*values)
     if len(rich_table.columns) > 1:
         rich_table.columns[0].justify = "center"
     console.print(rich_table)
 
 
-def print_pydantic_models(models: Sequence[BaseModel]) -> None:
+M = TypeVar("M", bound=BaseModel)
+
+
+def print_pydantic_models(
+    models: Sequence[M],
+    columns: Optional[Sequence[str]] = None,
+    exclude_columns: Sequence[str] = (),
+    is_active: Optional[Callable[[M], bool]] = None,
+) -> None:
     """Prints the list of Pydantic models in a table.
 
     Args:
         models: List of pydantic models that will be represented as a row in
             the table.
+        columns: Optionally specify subset and order of columns to display.
+        exclude_columns: Optionally specify columns to exclude. (Note: `columns`
+            takes precedence over `exclude_columns`.)
+        is_active: Optional function that marks as row as active.
+
     """
-    model_dicts = [
-        {key: str(value) for key, value in model.dict().items()}
-        for model in models
-    ]
-    print_table(model_dicts)
+
+    def __dictify(model: M) -> Dict[str, str]:
+        """Helper function to map over the list to turn Models into dicts."""
+        items = (
+            {
+                key: str(value)
+                for key, value in model.dict().items()
+                if key not in exclude_columns
+            }
+            if columns is None
+            else {key: str(model.dict()[key]) for key in columns}
+        )
+        # prepend an active marker if a function to mark active was passed
+        return (
+            dict(active=":point_right:" if is_active(model) else "", **items)
+            if is_active is not None
+            else items
+        )
+
+    print_table([__dictify(model) for model in models])
 
 
 def format_integration_list(
@@ -255,8 +280,7 @@ def print_stack_configuration(
     rich_table.add_column("COMPONENT_TYPE", overflow="fold")
     rich_table.add_column("COMPONENT_NAME", overflow="fold")
     for component_type, name in config.items():
-        link_name = f"[link={name}]{name}[/link]"
-        rich_table.add_row(component_type.value, link_name)
+        rich_table.add_row(component_type.value, name)
 
     # capitalize entries in first column
     rich_table.columns[0]._cells = [
@@ -345,8 +369,7 @@ def print_stack_component_configuration(
             if idx == 0:
                 elements.append(f"{elem.upper()}")
             else:
-                link_elem = f"[link={elem}]{elem}[/link]"
-                elements.append(link_elem)
+                elements.append(str(elem))
         rich_table.add_row(*elements)
 
     console.print(rich_table)
@@ -399,8 +422,7 @@ def print_profile(
             if idx == 0:
                 elements.append(f"{elem.upper()}")
             else:
-                link_elem = f"[link='{elem}']{elem}[/link]"
-                elements.append(link_elem)
+                elements.append(elem)
         rich_table.add_row(*elements)
 
     console.print(rich_table)
@@ -452,7 +474,7 @@ def _expand_argument_value_from_file(name: str, value: str) -> str:
 
     Raises:
         ValueError: If the argument value points to a file that doesn't exist,
-            that cannot be read, or is too long (i.e. exceeds
+            that cannot be read, or is too long(i.e. exceeds
             `MAX_ARGUMENT_VALUE_SIZE` bytes).
     """
     if value.startswith("@@"):
@@ -520,6 +542,27 @@ def parse_unknown_options(
         }
 
     return r_args
+
+
+def parse_unknown_component_attributes(args: List[str]) -> List[str]:
+    """Parse unknown options from the CLI.
+
+    Args:
+      args: A list of strings from the CLI.
+
+    Returns:
+        List of parsed args.
+    """
+    warning_message = (
+        "Please provide args with a proper "
+        "identifier as the key and the following structure: "
+        "--custom_attribute"
+    )
+
+    assert all(a.startswith("--") for a in args), warning_message
+    p_args = [a.lstrip("-") for a in args]
+    assert all(v.isidentifier() for v in p_args), warning_message
+    return p_args
 
 
 def install_packages(packages: List[str]) -> None:
@@ -592,7 +635,7 @@ def print_secrets(secrets: List[str]) -> None:
     rich_table.add_column("SECRET_NAME", overflow="fold")
     secrets.sort()
     for item in secrets:
-        rich_table.add_row(f"[link='{item}']{item}[/link]")
+        rich_table.add_row(item)
 
     console.print(rich_table)
 
@@ -637,13 +680,12 @@ def pretty_print_model_deployer(
         model_service_dicts.append(
             {
                 "STATUS": get_service_status_emoji(model_service),
-                "UUID": f"[link='{dict_uuid}']{dict_uuid}[/link]",
-                "PIPELINE_NAME": f"[link='{dict_pl_name}']{dict_pl_name}[/link]",
-                "PIPELINE_STEP_NAME": f"[link='{dict_pl_stp_name}']{dict_pl_stp_name}[/link]",
-                "MODEL_NAME": f"[link='{dict_model_name}']{dict_model_name}[/link]",
+                "UUID": dict_uuid,
+                "PIPELINE_NAME": dict_pl_name,
+                "PIPELINE_STEP_NAME": dict_pl_stp_name,
+                "MODEL_NAME": dict_model_name,
             }
         )
-
     print_table(
         model_service_dicts, UUID=table.Column(header="UUID", min_width=36)
     )
