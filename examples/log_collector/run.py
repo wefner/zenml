@@ -14,15 +14,16 @@
 import logging
 
 from zenml.pipelines import pipeline
-from zenml.steps import step
+from zenml.steps import step, Output
 
 
 @step
-def step_that_logs(step_logger: logging.Logger):
+def step_that_logs(step_logger: logging.Logger) -> Output(zerg=int):
     step_logger.warning("OH YEAH!")
     step_logger.info("OH YEAH!")
     step_logger.error("Kool Aid Man")
 
+    return 1
 
 @pipeline(enable_cache=False)
 def pipeline_that_logs(a):

@@ -94,7 +94,7 @@ class BaseLogCollector(StackComponent, ABC):
     TYPE: ClassVar[StackComponentType] = StackComponentType.LOG_COLLECTOR
 
     @abstractmethod
-    def add_custom_handler(self, step_name: str):
+    def add_custom_handler(self, step_name: str, log_base_path: str):
         """Add custom handler to allow for custom log locations"""
 
     @abstractmethod
@@ -144,13 +144,7 @@ class BaseLogCollector(StackComponent, ABC):
         """
         logger = logging.getLogger(name=name)
         logger.setLevel(self.get_logging_level().value)
-        logger.addHandler(self.get_console_handler())
-
-        # TODO [ENG-130]: Add a file handler for persistent handling
-        #  logger.addHandler(get_file_handler())
-        #  with this pattern, it's rarely necessary to propagate the error up to
-        #  parent
-
+        # logger.addHandler(self.get_console_handler())
         logger.propagate = False
         return logger
 

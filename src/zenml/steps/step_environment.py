@@ -46,6 +46,7 @@ class StepEnvironment(BaseEnvironmentComponent):
         pipeline_name: str,
         pipeline_run_id: str,
         step_name: str,
+        log_base_path: str,
         log_collector: "BaseLogCollector"
     ):
         """Initialize the environment of the currently running
@@ -61,9 +62,11 @@ class StepEnvironment(BaseEnvironmentComponent):
         self._pipeline_run_id = pipeline_run_id
         self._step_name = step_name
         self._log_collector = log_collector
+        self._log_base_path = log_base_path
 
     def __enter__(self):
-        return self._log_collector.add_custom_handler(self._step_name)
+        return self._log_collector.add_custom_handler(
+            self._step_name, log_base_path=self._log_base_path)
 
     def __exit__(self, type, value, traceback):
         self._log_collector.remove_custom_handler(self._step_name)

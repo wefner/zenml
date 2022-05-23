@@ -28,6 +28,7 @@ from __future__ import absolute_import, division, print_function
 import inspect
 import json
 import logging
+import os
 import sys
 import typing
 from typing import (
@@ -47,6 +48,7 @@ from typing import (
 )
 
 import pydantic
+from google.protobuf.json_format import MessageToJson
 from tfx.dsl.component.experimental.decorators import _SimpleComponent
 from tfx.dsl.components.base.base_executor import BaseExecutor
 from tfx.dsl.components.base.executor_spec import ExecutorClassSpec
@@ -458,6 +460,18 @@ class _FunctionExecutor(BaseExecutor):
                 "No TFX context is set for the currently running pipeline. "
                 "Cannot retrieve pipeline runtime information."
             )
+        # Get artifact store path from self._context.pipeline_node.contexts ???
+        artifact_store_path = Repository().active_stack.artifact_store.path
+        execution_id = self._context._unique_id
+        log_base_path = os.path.join(artifact_store_path,
+                                     step_name,
+                                     "step_logs",
+                                     execution_id)
+
+        if not fileio.exists(log_base_path):
+            fileio.makedirs(log_base_path)
+
+        log_collector = Repository().active_stack.log_collector
         # Wrap the execution of the step function in a step environment
         # that the step function code can access to retrieve information about
         # the pipeline runtime, such as the current step name and the current
@@ -466,7 +480,8 @@ class _FunctionExecutor(BaseExecutor):
             pipeline_name=self._context.pipeline_info.id,
             pipeline_run_id=self._context.pipeline_run_id,
             step_name=getattr(self, PARAM_STEP_NAME),
-            log_collector=Repository().active_stack.log_collector
+            log_base_path=log_base_path,
+            log_collector=log_collector
         ):
             return_values = self._FUNCTION(**function_params)
 

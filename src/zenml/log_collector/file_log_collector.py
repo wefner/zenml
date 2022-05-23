@@ -11,8 +11,9 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 #  or implied. See the License for the specific language governing
 #  permissions and limitations under the License.
+from io import StringIO
 import logging
-from logging.handlers import TimedRotatingFileHandler
+
 from typing import Any, ClassVar
 from zenml.log_collector.base_log_collector import (
     BaseLogCollector, CustomFormatter
@@ -20,18 +21,23 @@ from zenml.log_collector.base_log_collector import (
 
 
 class FileLogCollector(BaseLogCollector):
+
     FLAVOR: ClassVar[str] = "default"
 
+    _log_stream = None
     _stream_handler: logging.Handler = None
     _file_obj = None
+    _log_path = None
 
-    def add_custom_handler(self, step_name: str):
+    def add_custom_handler(self, step_name: str, log_base_path: str):
         """Return a file handler for logging."""
-        self._file_obj = open(f"{step_name}.log", 'w')
+        self._file_obj = open(f"{log_base_path}/{step_name}.log", 'w+')
+        # self._log_stream = StringIO()
         self._stream_handler = logging.StreamHandler(self._file_obj)
         self._stream_handler.setFormatter(CustomFormatter())
         self.get_logger(step_name).addHandler(self._stream_handler)
 
     def remove_custom_handler(self, step_name: str):
-        self._file_obj.close()
+        # self._file_obj.close()
         self.get_logger(step_name).removeHandler(self._stream_handler)
+        self._file_obj.close()
