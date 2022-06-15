@@ -76,7 +76,6 @@ ConnectionError
 ContainerOp
 ContainerOps
 Contextmanager
-cryptoKeys
 Cron
 CustomFormatter
 DAGs
@@ -110,12 +109,12 @@ Evidently's
 EvidentlyProfileConfig
 EvidentlyProfileStep
 EvidentlyVisualizer
-eu
 ExampleSecretSchema
 ExamplesRepo
 ExecutionStatus
 ExperimentTracker
 FacetStatisticsVisualizer
+FastAI
 FastAPI
 FeastFeatureStore
 FeastHistoricalFeaturesConfig
@@ -180,8 +179,6 @@ KMS
 KServe
 Keras
 KeyError
-keyRings
-kr
 Kubeflow
 KubeflowMetadataStore
 KubeflowOrchestrator
@@ -254,6 +251,7 @@ OpenAPI
 Orchestrators
 PID
 PNS
+PWD
 PYTHONPATH
 PandasAnalyzer
 PandasDatasource
@@ -510,6 +508,7 @@ cprf
 cpu
 creationTimestamp
 cron
+cryptoKeys
 csv
 ctx
 cuda
@@ -582,6 +581,7 @@ enums
 env
 envSecretRefName
 environ
+eu
 europe
 eval
 evidentlyai
@@ -589,6 +589,7 @@ explainers
 extensibility
 fSDFfjklsdfj
 faq
+fastai
 fcdb
 fce
 fd
@@ -675,8 +676,10 @@ jsonpath
 jupyter
 kaggle
 keras
+keyRings
 kfp
 kfp
+kr
 kubeconfig
 kubectl
 kubeflow
@@ -771,7 +774,6 @@ probabilisticmodelperformance
 profiler
 proto
 protobuf
-PWD
 py
 pydantic
 pyenv
@@ -813,8 +815,8 @@ seldon
 sepc
 serializable
 serverless
-serviceacc
 serviceAccountName
+serviceacc
 setFormatter
 setattr
 sha
