@@ -45,6 +45,11 @@ def model_importer() -> Learner:
     return from_pretrained_fastai("strickvl/redaction-classifier-fastai")
 
 
+@step
+def hf_model_importer() -> Learner:
+    return from_pretrained_fastai("strickvl/redaction-classifier-fastai")
+
+
 # @step
 # def fine_tune_model(data, model: Learner) -> Learner:
 #     pass
@@ -58,14 +63,18 @@ def model_importer() -> Learner:
 
 
 @pipeline
-def fastai_pipeline(model_importer, data_importer):
-    model_importer()
+def fastai_pipeline(normal_model_importer, hf_model_importer, data_importer):
+    normal_model_importer()
+    hf_model_importer()
     data_importer()
 
 
 if __name__ == "__main__":
     test = fastai_pipeline(
         model_importer().with_return_materializers(FastaiLearnerMaterializer),
+        hf_model_importer().with_return_materializers(
+            FastaiLearnerMaterializer
+        ),
         data_importer().with_return_materializers(
             FastaiDataLoadersMaterializer
         ),
