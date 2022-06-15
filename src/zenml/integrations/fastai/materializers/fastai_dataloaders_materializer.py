@@ -51,7 +51,7 @@ class FastaiDataLoadersMaterializer(BaseMaterializer):
         """Writes a fastai dataloader.
 
         Args:
-            dataloader: A fastai.data.core.DataLoader
+            dataloaders: A fastai.data.core.DataLoader
         """
         super().handle_return(dataloaders)
 
