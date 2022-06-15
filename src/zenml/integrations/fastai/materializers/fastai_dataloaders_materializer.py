@@ -11,54 +11,52 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
 #  or implied. See the License for the specific language governing
 #  permissions and limitations under the License.
-"""Implementation of the fastai Learner materializer."""
+"""Implementation of the fastai DataLoader materializer."""
 
 import os
-from typing import Type
+from typing import cast
 
-from fastai.learner import Learner
+import torch
+from fastai.data.core import DataLoaders
 
-from zenml.artifacts import ModelArtifact
+from zenml.artifacts import DataArtifact
 from zenml.io import fileio
 from zenml.materializers.base_materializer import BaseMaterializer
 
-DEFAULT_FILENAME = "model.pkl"
+DEFAULT_FILENAME = "fastai_dataloaders.pt"
 
 
-class FastaiLearnerMaterializer(BaseMaterializer):
-    """Materializer to read/write fastai models."""
+class FastaiDataLoadersMaterializer(BaseMaterializer):
+    """Materializer to read/write fastai dataloaders."""
 
-    ASSOCIATED_TYPES = (Learner,)
-    ASSOCIATED_ARTIFACT_TYPES = (ModelArtifact,)
+    ASSOCIATED_TYPES = (DataLoaders,)
+    ASSOCIATED_ARTIFACT_TYPES = (DataArtifact,)
 
-    def handle_input(self, data_type: Type[Learner]) -> Learner:
-        """Reads and returns a fastai model.
-
-        Only loads the model, not the checkpoint.
+    def handle_input(self, data_type: DataLoaders) -> DataLoaders:
+        """Reads and returns a fastai DataLoader.
 
         Args:
-            data_type: The type of the model to load.
+            data_type: The type of the dataloader to load.
 
         Returns:
-            A loaded fastai model.
+            A loaded fastai dataloader.
         """
         super().handle_input(data_type)
-
         with fileio.open(
             os.path.join(self.artifact.uri, DEFAULT_FILENAME), "rb"
         ) as f:
-            return model.load(f)  # type: ignore[no-untyped-call]  # noqa
+            return cast(DataLoaders, torch.load(f))  # type: ignore[no-untyped-call]  # noqa
 
-    def handle_return(self, model: Learner) -> None:
-        """Writes a PyTorch model, as a model and a checkpoint.
+    def handle_return(self, dataloaders: DataLoaders) -> None:
+        """Writes a fastai dataloader.
 
         Args:
-            model: A fastai model
+            dataloader: A fastai.data.core.DataLoader
         """
-        super().handle_return(model)
+        super().handle_return(dataloaders)
 
-        # Save entire model to artifact directory
+        # Save entire dataloader to artifact directory
         with fileio.open(
             os.path.join(self.artifact.uri, DEFAULT_FILENAME), "wb"
         ) as f:
-            model.save(f)  # type: ignore[no-untyped-call]  # noqa
+            torch.save(dataloaders, f)

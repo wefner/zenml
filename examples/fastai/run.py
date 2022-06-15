@@ -17,24 +17,27 @@ from fastai.learner import Learner
 from fastai.vision.all import *
 from huggingface_hub import from_pretrained_fastai
 
+from zenml.integrations.fastai.materializers.fastai_dataloaders_materializer import (
+    FastaiDataLoadersMaterializer,
+)
 from zenml.integrations.fastai.materializers.fastai_learner_materializer import (
     FastaiLearnerMaterializer,
 )
 from zenml.pipelines import pipeline
 from zenml.steps import step
 
-CAT_IMAGES_PATH = "data/images/"
+CAT_IMAGES_PATH = "data/"
 
 
-@step
+@step(enable_cache=False)
 def data_importer() -> DataLoaders:
     data_block = DataBlock(
         blocks=(ImageBlock, CategoryBlock),
         get_items=get_image_files,
-        splitter=RandomSubsetSplitter(train_sz=0, val_sz=1),
+        splitter=RandomSplitter(),
         item_tfms=Resize(224),
     )
-    return data_block.dataloaders(CAT_IMAGES_PATH, bs=8)
+    return data_block.dataloaders(CAT_IMAGES_PATH)
 
 
 @step
@@ -55,12 +58,16 @@ def model_importer() -> Learner:
 
 
 @pipeline
-def test_pipeline(model_importer):
+def fastai_pipeline(model_importer, data_importer):
     model_importer()
+    data_importer()
 
 
 if __name__ == "__main__":
-    test = test_pipeline(
-        model_importer().with_return_materializers(FastaiLearnerMaterializer)
+    test = fastai_pipeline(
+        model_importer().with_return_materializers(FastaiLearnerMaterializer),
+        data_importer().with_return_materializers(
+            FastaiDataLoadersMaterializer
+        ),
     )
     test.run()

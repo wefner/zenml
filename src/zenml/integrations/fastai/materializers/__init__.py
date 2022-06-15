@@ -13,6 +13,9 @@
 #  permissions and limitations under the License.
 """Initialization of the fastai materializers."""
 
+from zenml.integrations.fastai.materializers.fastai_dataloaders_materializer import (  # noqa
+    FastaiDataLoadersMaterializer,
+)
 from zenml.integrations.fastai.materializers.fastai_learner_materializer import (  # noqa
     FastaiLearnerMaterializer,
 )
