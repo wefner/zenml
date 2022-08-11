@@ -7,6 +7,9 @@ info:
 
 tags:
   - name: health
+  - name: auth
+    description: >-
+      All things related to the login, logout and registration.
   - name: pipeline
     description: >-
       The pipeline resource is the mostly construct that defines a specific techincal goal 
@@ -26,6 +29,9 @@ tags:
       The run is also where information can be found regarding generated reports 
       from `data validators`, dashboards from `experiment trackers` and served models
       from `model deployers`.
+  - name: step
+    description: >-
+      The step that was used in a given pipeline run.
   - name: stack
     description: >-
       A project can contain many different stacks (for example `dev-stack`,
@@ -55,6 +61,10 @@ tags:
   - name: role
     description: >-
       A role dictates which resources a user is permitted to read, write or delete.
+  - name: metadata-config
+    description: >-
+      Returns the configuration that allows the orchestrator to directly connect to the 
+      metadata store. This is not used by the UI.
 paths:
   #-------------------------------
   # Health
@@ -440,13 +450,13 @@ paths:
           $ref: '#/components/responses/422'
       security:
         - HTTPBasic: []
-  /triggers/{trigger_id}/pipeline-configuration:
+  /triggers/{trigger_id}/runtime-configuration:
     put:
-      summary: Update the pipeline configuration used by the trigger
+      summary: Update the pipeline runtime configuration used by the trigger
       tags:
         - trigger
       description: |-
-        Updates the pipeline configuration used for triggered runs.
+        Updates the pipeline runtime configuration used for triggered runs.
       operationId: update_trigger_pipeline_conf
       parameters:
         - $ref: '#/components/parameters/triggerId'
@@ -462,7 +472,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Trigger'
+                type: object
         '401':
           $ref: '#/components/responses/401'
         '404':
@@ -599,23 +609,24 @@ paths:
           $ref: '#/components/responses/422'
       security:
         - HTTPBasic: []
-  /runs/{run_id}/status:
+  /runs/{run_id}/graph:
     get:
-      summary: Get the status for a given pipeline run
+      summary: Get the dag graph for a given pipeline run
       tags:
         - run
       description: |-
-        Gets the status of a given pipeline run.
-      operationId: get_pipeline_run_status
+        Gets the dag graph of a given pipeline run.
+      operationId: get_pipeline_run_graph
       parameters:
         - $ref: '#/components/parameters/runId'
       responses:
         '200':
-          description: Returns the requested Status
+          description: Returns the requested graph to visualize the run
           content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RunStatus'
+            image/*:     # Media type
+             schema:
+               type: string
+               format: binary
         '401':
           $ref: '#/components/responses/401'
         '404':
@@ -649,16 +660,110 @@ paths:
           $ref: '#/components/responses/422'
       security:
         - HTTPBasic: []
-  /runs/{run_id}/steps/{step_id}/outputs:
+  /runs/{run_id}/runtime-configuration:
     get:
-      summary: Get all outputs from a specific step
+      summary: Get the runtime-configuration for a given pipeline run
       tags:
         - run
       description: |-
-        A pipeline run uses specific steps. This endpoint returns all steps from a pipeline run.
-      operationId: get_pipeline_run_step_outputs
+        A pipeline run uses a specific runtime-configuration.
+      operationId: get_pipeline_runtime_configuration
       parameters:
         - $ref: '#/components/parameters/runId'
+      responses:
+        '200':
+          description: Returns the requested pipeline run steps.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          $ref: '#/components/responses/422'
+      security:
+        - HTTPBasic: []
+  /runs/{run_id}/component-side-effects:
+    get:
+      summary: >-
+        Get the side-effects produced by stack components
+      tags:
+        - run
+      description: |-
+        A pipeline run not only produces artifacts at the inputs and outputs of steps, but also 
+        potentially component-based side effects like mlflow experiment runs, seldon deployed models, etc.
+        This resource will contain relevant links that the user can follow.
+      operationId: get_pipeline_run_component_side_effect
+      parameters:
+        - $ref: '#/components/parameters/runId'
+        - name: component_id
+          in: query
+          required: false
+          schema:
+            title: Component Id
+            type: string
+        - name: component_type
+          in: query
+          required: false
+          schema:
+            title: Component Type
+            type: string
+      responses:
+        '200':
+          description: >-
+            Returns the requested component side effects for the given run. Optionally filter by specific component type or component id.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          $ref: '#/components/responses/422'
+      security:
+        - HTTPBasic: []
+  #-------------------------------
+  # Steps
+  #-------------------------------
+  /steps/{step_id}:
+    get:
+      summary: Get one specific step
+      tags:
+        - step
+      description: |-
+        This endpoint returns one specific step uniquely identified by its id.
+      operationId: get_pipeline_run_step_by_id
+      parameters:
+        - $ref: '#/components/parameters/stepId'
+      responses:
+        '200':
+          description: Returns the requested outputs from the step.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Step'
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          $ref: '#/components/responses/422'
+
+      security:
+        - HTTPBasic: []
+  /steps/{step_id}/outputs:
+    get:
+      summary: Get all outputs from a specific step
+      tags:
+        - step
+      description: |-
+        Gets a list of outputs for a specific step.
+      operationId: get_pipeline_run_step_outputs
+      parameters:
         - $ref: '#/components/parameters/stepId'
         - in: query
           required: false
@@ -671,6 +776,14 @@ paths:
             stack. For example this would allow the user to get the reports generated
             by the data validator or see a link to the served models from the 
             model deployer.
+        - in: query
+          required: false
+          schema:
+            title: Artifact Type
+            type: string
+          name: artifact_type
+          description: >- 
+            Get all the entities of a specific artifact type.
       responses:
         '200':
           description: Returns the requested outputs from the step.
@@ -890,11 +1003,11 @@ paths:
         - HTTPBasic: []
   /components/{component_type}/flavors:
     get:
-      summary: Get list of flavors for stack component types
+      summary: Get list of stack component flavors for a component type
       tags:
         - component
       description: |-
-        Returns a list of stack component type flavors
+        Get list of flavors including their configuration schema for stack component types
       operationId: get_component_type_flavor
       parameters:
         - $ref: '#/components/parameters/componentType'
@@ -908,8 +1021,8 @@ paths:
                 type: array
                 items:
                   oneOf:
-                    - $ref: '#/components/schemas/AlerterFlavor'
-                    - $ref: '#/components/schemas/DeployerFlavor'
+                    - $ref: '#/components/schemas/AlerterFlavorSchema'
+                    - $ref: '#/components/schemas/DeployerFlavorSchema'
                   discriminator:
                     propertyName: component_type
                     mapping:
@@ -999,63 +1112,57 @@ paths:
           $ref: '#/components/responses/422'
       security:
         - HTTPBasic: []
-  /components/{component_id}/outputs:
+  /components/{component_id}/component-side-effects:
     get:
-      summary: Get a specific stack component
+      summary: >-
+        Get the side-effects produced by the stack component
       tags:
         - component
       description: |-
-        Get a specific stack component using its unique id.
-      operationId: get_component_specific_output
+        A pipeline run not only produces artifacts at the inputs and outputs of steps, but also 
+        potentially component-based side effects like mlflow experiment runs, seldon deployed models, etc.
+        This resource will contain relevant links that the user can follow.
+      operationId: get_component_side_effects
       parameters:
         - $ref: '#/components/parameters/componentId'
-        - in: query
-          name: pipeline_id
-          required: false
-          schema:
-            title: Pipeline Id
-            type: string
-          description: >-
-            Allows filtering by specific pipeline.
-        - in: query
-          name: trigger_id
-          required: false
-          schema:
-            title: Trigger Id
-            type: string
-          description: >-
-            Allows filtering by specific pipeline trigger.
-        - in: query
-          name: user_id
-          required: false
-          schema:
-            title: User Id
-            type: string
-          description: >-
-            Allows filtering by specific user that ran the pipeline that 
-            produced the output.
-        - in: query
-          name: run_id
+        - name: run_id
+          in: query
           required: false
           schema:
             title: Run Id
             type: string
           description: >-
-            Allows filtering by specific pipeline run.
+            Filter by specific run ID. Might be a duplicate of `/runs/{run_id}/component-side-effects`.
+        - name: pipeline_id
+          in: query
+          required: false
+          schema:
+            title: Pipeline Id
+            type: string
+          description: >-
+            Filter by specific pipeline ID.
+        - name: stack_id
+          in: query
+          required: false
+          schema:
+            title: Pipeline Id
+            type: string
+          description: >-
+            Filter by specific stack ID.
       responses:
         '200':
-          description: Returns the requested component.
+          description: >-
+            Returns the requested component side effects for the given component. Optionally filter by specific pipeline, run or stack
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Component'
+                type: object
         '401':
           $ref: '#/components/responses/401'
         '404':
           $ref: '#/components/responses/404'
         '422':
           $ref: '#/components/responses/422'
-
       security:
         - HTTPBasic: []
   #-------------------------------
@@ -1850,7 +1957,106 @@ paths:
           $ref: '#/components/responses/422'
       security:
         - HTTPBasic: []
-
+  #-------------------------------
+  # Auth  related things
+  #-------------------------------
+  /register:
+    post:
+      summary: Register
+      tags:
+        - auth
+      description: |-
+        Registers a user
+      operationId: register_a_user
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          $ref: '#/components/responses/422'
+      security:
+        - HTTPBasic: []
+  /login:
+    post:
+      summary: Login
+      tags:
+        - auth
+      description: |-
+        Login as a user
+      operationId: perform_login
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          $ref: '#/components/responses/422'
+      security:
+        - HTTPBasic: []
+  /logout:
+    post:
+      summary: Logout
+      tags:
+        - auth
+      description: |-
+        Logout
+      operationId: perform_logout
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          $ref: '#/components/responses/422'
+      security:
+        - HTTPBasic: []
+  #-------------------------------
+  # Metadata Config
+  #-------------------------------
+  /metadata-config:
+    get:
+      summary: Metadata Config
+      tags:
+        - metadata-config
+      description: |-
+        Metadata config that allows the Orchestrator to bypass the API and connect directly to the
+        Metadata Database tables to read and write run data.
+      operationId: get_metadata_config
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                title: Metadata Config
+                type: object
+        '401':
+          $ref: '#/components/responses/401'
+        '404':
+          $ref: '#/components/responses/404'
+        '422':
+          $ref: '#/components/responses/422'
+      security:
+        - HTTPBasic: []
 components:
   #-------------------------------
   # Reusable schemas (data models)
@@ -1880,6 +2086,19 @@ components:
         description:
           title: Description
           type: string
+        owner:
+          title: Owner
+          type: string
+          readOnly: True
+          description: >-
+            User that created the trigger.
+        creation_date:
+          title: Created by
+          type: string
+          format: date-time
+          readOnly: True
+          description: >-
+            User that created the trigger.
       description: |-
         A Pipeline is the blueprint for a collection of functions (or steps) 
         that are meant to fulfill one overarching task. 
@@ -1901,6 +2120,16 @@ components:
           title: Source
           type: string
           readOnly: True
+        step_configuration:
+          title: Step Configuration
+          type: object
+        status:
+          type: string
+          enum:
+            - Completed
+            - Failed
+            - Cached
+          example: Completed
       description: |-
         Step that was used in a given Pipeline Run.
     Output:
@@ -1925,35 +2154,72 @@ components:
         zenml_version:
           title: Zenml Version
           type: string
+          description: >-
+            The ZenML Version that the pipeline was run on.
+        duration:
+          title: duration
+          type: string
+          description: >-
+            The dureation of the last run.
         git_sha:
           title: Git Sha
           type: string
+          description: >-
+            The GitSha of the code repository this pipeline was run with
         pipeline:
-          $ref: '#/components/schemas/Pipeline'
-        stack:
-          $ref: '#/components/schemas/Stack'
-        runtime_configuration:
-          title: Runtime Configuration
           type: object
-        user_id:
-          title: User Id
-          type: string
-          format: uuid
-        project_name:
-          title: Project Name
-          type: string
-      description: |-
-        A single Pipeline run.
-    RunStatus:
-      title: RunStatus
-      properties:
-        Status:
+          properties:
+            id:
+              title: id
+              type: string
+              readOnly: True
+            name:
+              title: Name
+              type: string
+          description: >-
+            The pipeline that the run is an instance of.
+        stack:
+          type: object
+          properties:
+            id:
+              title: id
+              type: string
+              readOnly: True
+            name:
+              title: Name
+              type: string
+          description: >-
+            The stack that was used for this run.
+        trigger:
+          type: object
+          properties:
+            id:
+              title: id
+              type: string
+              readOnly: True
+            name:
+              title: Name
+              type: string
+          description: >-
+            The trigger that was used for this run.
+        status:
           type: string
           enum:
             - Running
             - Failed
             - Finished
-      description: All possible statuses a `Run` can have.
+          example: Finished
+        user_id:
+          title: User Id
+          type: string
+          format: uuid
+          description: >-
+            The User that triggered this run.
+        project_name:
+          title: Project Name
+          type: string
+      description: |-
+        A single Pipeline run.
     Trigger:
       title: Trigger
       required:
@@ -1962,23 +2228,40 @@ components:
         - configuration
       type: object
       properties:
-        type:
-          $ref: '#/components/schemas/TriggerType'
-        flavor:
+        id:
           title: id
           type: string
+          readOnly: True
+        type:
+          title: TriggerType
+          enum:
+            - once_off
+            - event
+            - scheduler
+          type: string
+          description: >-
+            All possible types a `Trigger` can have.
+          example: scheduler
         configuration:
           title: configuration
           type: object
-      description: Serializable Configuration of a Trigger.
-    TriggerType:
-      title: TriggerType
-      enum:
-        - once_off
-        - event
-        - scheduler
-      type: string
-      description: All possible types a `Trigger` can have.
+          description: >-
+            The exact schema for this configuration is currently not yet defined.
+        owner:
+          title: Owner
+          type: string
+          readOnly: True
+          description: >-
+            User that created the trigger.
+        creation_date:
+          title: Created by
+          type: string
+          format: date-time
+          readOnly: True
+          description: >-
+            User that created the trigger.
+      description: >-
+        Serializable Configuration of a Trigger.
     Stack:
       title: Stack
       required:
@@ -1994,7 +2277,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Component'
-      description: Network Serializable Wrapper describing a Stack.
+      description: >-
+        Description of a stack which is a combination of multiple stack components.
     Component:
       title: Component
       required:
@@ -2019,8 +2303,12 @@ components:
           format: uuid
           readOnly: True
         config:
-          title: Config
           type: object
+          oneOf:
+            - $ref: '#/components/schemas/SlackAlerterFlavor'
+            - $ref: '#/components/schemas/SeldonDeployerFlavor'
+          discriminator:
+            propertyName: flavor
       description: Serializable Configuration of a StackComponent.
       example:
         id: asdf2-asdf1-ad143
@@ -2045,11 +2333,13 @@ components:
         - step_operator
       type: string
       description: All possible types a `StackComponent` can have.
-    AlerterFlavor:
+    AlerterFlavorSchema:
       title: AlerterFlavor
       properties:
+        type:
+          type: string
         slack:
-          $ref: '#/components/schemas/SlackAlerterFlavor'
+          $ref: '#/components/schemas/SlackAlerterFlavorSchema'
     SlackAlerterFlavor:
       title: SlackAlerterFlavor
       required:
@@ -2063,22 +2353,31 @@ components:
           title: configuration
           type: string
       description: Serializable Configuration for the Slack Alerter with default values prefilled.
-    DeployerFlavor:
+    SlackAlerterFlavorSchema:
+      title: SlackAlerterFlavorSchema
+      type: object
+      properties:
+        slack_token:
+          type: object
+        default_slack_channel_id:
+          type: object
+      description: Configuration Schema for the Slack Alerter.
+      example:
+        slack_token:
+          {type: string, required: True}
+        default_slack_channel_id:
+          {type: string, required: True}
+    DeployerFlavorSchema:
       title: DeployerFlavor
       properties:
         seldon:
-          $ref: '#/components/schemas/SeldonDeployerFlavor'
+          $ref: '#/components/schemas/SeldonDeployerFlavorSchema'
     SeldonDeployerFlavor:
       title: SeldonDeployerFlavor
       required:
-        - id
         - base_url
       type: object
       properties:
-        flavor:
-          title: id
-          type: string
-          readOnly: True
         kubernetes_context:
           title: configuration
           type: string
@@ -2089,6 +2388,24 @@ components:
           title: base_url
           type: string
       description: Serializable Configuration for the Seldon Deployer with default values prefilled.
+    SeldonDeployerFlavorSchema:
+      title: SeldonDeployerFlavorSchema
+      type: object
+      properties:
+        kubernetes_context:
+          type: object
+        kubernetes_namespace:
+          type: object
+        base_url:
+          type: object
+      description: Configuration Schema for the Slack Alerter.
+      example:
+        kubernetes_context:
+          {type: string, required: True}
+        kubernetes_namespace:
+          {type: string, required: True}
+        base_url:
+          {type: string, required: True}
     Project:
       title: Project
       required:
