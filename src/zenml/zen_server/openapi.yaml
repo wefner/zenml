@@ -2074,31 +2074,49 @@ components:
       title: Pipeline
       required:
         - name
+        - id
       type: object
       properties:
         id:
           title: id
           type: string
           readOnly: True
+          example: 9eaa2d6
         name:
           title: Name
           type: string
+          example: cat_detection_training_pipeline
         description:
           title: Description
           type: string
+          example: >-
+            Pipeline to create a cat detector.
+        status:
+          $ref: '#/components/schemas/PreviousRunsStatus'
         owner:
           title: Owner
-          type: string
+          type: object
+          properties:
+            id:
+              title: id
+              type: string
+              readOnly: True
+            name:
+              title: Name
+              type: string
           readOnly: True
           description: >-
             User that created the trigger.
+          example:
+            {name: htahir, id: w813dw}
         creation_date:
-          title: Created by
+          title: Created at
           type: string
           format: date-time
           readOnly: True
           description: >-
-            User that created the trigger.
+            Time when this pipeline was first created.
+          example: 2022-08-12T07:12:45.931Z
       description: |-
         A Pipeline is the blueprint for a collection of functions (or steps) 
         that are meant to fulfill one overarching task. 
@@ -2140,6 +2158,7 @@ components:
     Run:
       title: Run
       required:
+        - id
         - name
         - pipeline
         - stack
@@ -2148,24 +2167,33 @@ components:
         - project_name
       type: object
       properties:
+        id:
+          title: id
+          type: string
+          readOnly: True
+          example: 68be3034
         name:
           title: Name
           type: string
+          example: cat_detection_training_pipeline_run_4921
         zenml_version:
           title: Zenml Version
           type: string
           description: >-
             The ZenML Version that the pipeline was run on.
+          example: 0.12.0
         duration:
           title: duration
           type: string
           description: >-
             The dureation of the last run.
+          readOnly: True
         git_sha:
           title: Git Sha
           type: string
           description: >-
             The GitSha of the code repository this pipeline was run with
+          example: 73841b4
         pipeline:
           type: object
           properties:
@@ -2178,6 +2206,8 @@ components:
               type: string
           description: >-
             The pipeline that the run is an instance of.
+          example:
+            {name: cat_detection_training_pipeline, id: 9eaa2d6}
         stack:
           type: object
           properties:
@@ -2190,6 +2220,8 @@ components:
               type: string
           description: >-
             The stack that was used for this run.
+          example:
+            {name: prod_stack, id: 9lg2jk3}
         trigger:
           type: object
           properties:
@@ -2202,22 +2234,44 @@ components:
               type: string
           description: >-
             The trigger that was used for this run.
+          example:
+            {name: weekly_prod_trigger, id: 381jd1k}
         status:
           type: string
           enum:
             - Running
             - Failed
             - Finished
+          readOnly: True
           example: Finished
-        user_id:
-          title: User Id
-          type: string
-          format: uuid
+        owner:
+          title: Owner
+          type: object
+          properties:
+            id:
+              title: id
+              type: string
+              readOnly: True
+            name:
+              title: Name
+              type: string
+          readOnly: True
           description: >-
-            The User that triggered this run.
+            User that owns this run.
+          example:
+            {name: htahir, id: w813dw}
         project_name:
           title: Project Name
           type: string
+          example: demo_prj
+        creation_date:
+          title: Run started at
+          type: string
+          format: date-time
+          readOnly: True
+          description: >-
+            Run started at.
+          example: 2022-08-12T07:12:45.931Z
       description: |-
         A single Pipeline run.
     Trigger:
@@ -2232,10 +2286,11 @@ components:
           title: id
           type: string
           readOnly: True
+          example: 381jd1k
         type:
           title: TriggerType
           enum:
-            - once_off
+            - ad_hoc
             - event
             - scheduler
           type: string
@@ -2247,12 +2302,24 @@ components:
           type: object
           description: >-
             The exact schema for this configuration is currently not yet defined.
+        status:
+          $ref: '#/components/schemas/PreviousRunsStatus'
         owner:
           title: Owner
-          type: string
+          type: object
+          properties:
+            id:
+              title: id
+              type: string
+              readOnly: True
+            name:
+              title: Name
+              type: string
           readOnly: True
           description: >-
             User that created the trigger.
+          example:
+            {name: htahir, id: w813dw}
         creation_date:
           title: Created by
           type: string
@@ -2262,16 +2329,57 @@ components:
             User that created the trigger.
       description: >-
         Serializable Configuration of a Trigger.
+    PreviousRunsStatus:
+      title: Status' of the Previous Run
+      type: object
+      properties:
+        1:
+          $ref: '#/components/schemas/RunStatus'
+        2:
+          $ref: '#/components/schemas/RunStatus'
+        3:
+          $ref: '#/components/schemas/RunStatus'
+    RunStatus:
+      title: Run status
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - Running
+            - Failed
+            - Finished
+          readOnly: True
+          example: Finished
+        run:
+          type: object
+          properties:
+            id:
+              title: id
+              type: string
+              readOnly: True
+            name:
+              title: Name
+              type: string
+          description: >-
+            The run.
     Stack:
       title: Stack
       required:
+        - id
         - name
         - components
       type: object
       properties:
+        id:
+          title: id
+          type: string
+          readOnly: True
+          example: 9lg2jk3
         name:
           title: Name
           type: string
+          example: prod_stack
         components:
           title: Components
           type: array
@@ -2465,16 +2573,17 @@ components:
         id:
           title: Id
           type: string
-          format: uuid
           readOnly: True
+          example: w813dw
+        name:
+          title: Name
+          type: string
+          example: htahir
         creation_date:
           title: Creation Date
           type: string
           format: date-time
           readOnly: True
-        name:
-          title: Name
-          type: string
       description: |-
         The user with all their properties.
     Role:
