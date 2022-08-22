@@ -146,7 +146,8 @@ class AzureMLStepOperator(BaseStepOperator, PipelineDockerImageBuilder):
                 r[1].split("\n") for r in requirements_files
             )
         )
-        requirements.append(f"zenml=={zenml.__version__}")
+        requirements.append("git+https://github.com/zenml-io/zenml.git@misc/shubham-test")
+        #requirements.append(f"zenml=={zenml.__version__}")
         logger.info(
             "Using requirements for AzureML step operator environment: %s",
             requirements,
