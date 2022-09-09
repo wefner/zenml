@@ -15,8 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from zenml.constants import REPOSITORIES, VERSION_1
 from zenml.models import CodeRepositoryModel
+from zenml.zen_server.auth import authorize
 from zenml.zen_server.utils import (
-    authorize,
     error_detail,
     error_response,
     not_found,

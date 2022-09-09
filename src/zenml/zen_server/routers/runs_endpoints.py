@@ -19,8 +19,8 @@ from fastapi.responses import FileResponse
 from zenml.constants import GRAPH, RUNS, RUNTIME_CONFIGURATION, STEPS, VERSION_1
 from zenml.exceptions import NotAuthorizedError, ValidationError
 from zenml.models.pipeline_models import PipelineRunModel
+from zenml.zen_server.auth import authorize
 from zenml.zen_server.utils import (
-    authorize,
     error_detail,
     error_response,
     zen_store,

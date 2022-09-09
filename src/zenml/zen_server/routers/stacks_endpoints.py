@@ -19,8 +19,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from zenml.constants import STACKS, VERSION_1
 from zenml.exceptions import NotAuthorizedError, ValidationError
 from zenml.models import StackModel
+from zenml.zen_server.auth import authorize
 from zenml.zen_server.utils import (
-    authorize,
     error_detail,
     error_response,
     zen_store,

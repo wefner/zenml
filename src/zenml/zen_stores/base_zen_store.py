@@ -105,12 +105,11 @@ class BaseZenStore(BaseModel):
             TypeError: If the store type is unsupported.
         """
         from zenml.zen_stores.sql_zen_store import SqlZenStore
-
-        # from zenml.zen_stores.rest_zen_store import RestZenStore
+        from zenml.zen_stores.rest_zen_store import RestZenStore
 
         store_class = {
             StoreType.SQL: SqlZenStore,
-            # StoreType.REST: RestZenStore,
+            StoreType.REST: RestZenStore,
         }.get(type)
 
         if store_class is None:

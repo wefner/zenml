@@ -20,8 +20,8 @@ from zenml.constants import FLAVORS, STACK_COMPONENTS, TYPES, VERSION_1
 from zenml.enums import StackComponentType
 from zenml.exceptions import NotAuthorizedError, ValidationError
 from zenml.models import ComponentModel, FlavorModel
+from zenml.zen_server.auth import authorize
 from zenml.zen_server.utils import (
-    authorize,
     error_detail,
     error_response,
     zen_store,

@@ -17,8 +17,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from zenml.constants import ROLES, VERSION_1
 from zenml.models import RoleModel
+from zenml.zen_server.auth import authorize
 from zenml.zen_server.utils import (
-    authorize,
     error_detail,
     error_response,
     zen_store,

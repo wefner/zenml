@@ -109,7 +109,7 @@ class GlobalConfiguration(BaseModel, metaclass=GlobalConfigMetaClass):
         version: Version of ZenML that was last used to create or update the
             global config.
         store: Store configuration.
-        active_stack_name: The name of the active stack.
+        active_stack_id: The ID of the active stack.
         active_project_name: The name of the active project.
         _config_path: Directory where the global config file is stored.
     """
@@ -372,69 +372,50 @@ class GlobalConfiguration(BaseModel, metaclass=GlobalConfigMetaClass):
     def _sanitize_config(self) -> None:
         """Sanitize and save the global configuration.
 
-        This method is called to ensure that the global configuration
-        doesn't contain outdated information, such as an active stack or project
-        that no longer exists.
+        This method is called to ensure that the active stack and project
+        are set to their default values, if possible.
         """
         from zenml.zen_stores.base_zen_store import DEFAULT_PROJECT_NAME
 
-        # Ensure that the current repository active project is still valid
-        if self.active_project_name:
-            try:
-                self.zen_store.get_project(self.active_project_name)
-            except KeyError:
-                logger.warning(
-                    "Project '%s' not found. Resetting the global active "
-                    "project to the default.",
-                    self.active_project_name,
+        try:
+            self.zen_store.get_project(DEFAULT_PROJECT_NAME)
+        except KeyError:
+            logger.warning(
+                f"Could not set the global active project: "
+                f"'{DEFAULT_PROJECT_NAME}' project not found.",
+            )
+            self.active_project_name = None
+        else:
+            if self.active_project_name != DEFAULT_PROJECT_NAME:
+                logger.info(
+                    f"Setting the global active project to "
+                    f"'{DEFAULT_PROJECT_NAME}'."
                 )
                 self.active_project_name = DEFAULT_PROJECT_NAME
-        else:
-            logger.warning(
-                "Global active project not set. Resetting it to the default."
-            )
-            self.active_project_name = DEFAULT_PROJECT_NAME
 
-        # Sanitize the repository active stack
-        if not self.active_stack_id:
-            logger.warning(
-                "The global active stack is not set. Switching the global "
-                "active stack to 'default'"
-            )
+        if self.active_project_name:
+
             default_stack = self.zen_store.list_stacks(
                 name=DEFAULT_STACK_NAME,
                 project_name_or_id=self.zen_store.get_project(
                     self.active_project_name
                 ).id,
-                user_id=self.zen_store.default_user_id,
-            )[
-                0
-            ]  # TODO: [server] its not guaranteed that this stack exists
-            self.active_stack_id = default_stack.id
-
-        # Ensure that the current repository active stack is still valid
-        else:
-            # Ensure that the repository active stack is still valid
-            try:
-                self.zen_store.get_stack(stack_id=self.active_stack_id)
-                # TODO: this does not guarantee that the stack is actually active
-
-            except KeyError:
-                logger.warning(
-                    "Stack with id: '%s' not found. Switching the global active"
-                    " stack to 'default'",
-                    self.active_stack_id,
+                user_id=self.zen_store.active_user.id,
+            )
+            if not default_stack:
+                logger.error(
+                    f"Could not reset the global active stack: "
+                    f"'{DEFAULT_STACK_NAME}' stack not found for project "
+                    f"{self.active_project_name} and user "
+                    f"{self.zen_store.active_user_name}."
                 )
-            default_stack = self.zen_store.list_stacks(
-                name=DEFAULT_STACK_NAME,
-                project_name_or_id=self.zen_store.get_project(
-                    self.active_project_name
-                ).id,
-                user_id=self.zen_store.default_user_id,
-            )[
-                0
-            ]  # TODO: [server] its not guaranteed that this stack exists
-            self.active_stack_id = default_stack.id
+                self.active_stack_id = None
+            else:
+                logger.info(
+                    f"Resetting the global active stack to "
+                    f"{DEFAULT_STACK_NAME}."
+                )
+                self.active_stack_id = default_stack[0].id
 
     @staticmethod
     def default_config_directory() -> str:

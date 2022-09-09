@@ -20,7 +20,13 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
-from zenml.models import RoleAssignmentModel, RoleModel, TeamModel, UserModel
+from zenml.models import (
+    RoleAssignmentModel,
+    RoleModel,
+    TeamModel,
+    UserCredentialsModel,
+    UserModel,
+)
 
 if TYPE_CHECKING:
     from zenml.zen_stores.schemas.project_schemas import ProjectSchema
@@ -38,6 +44,7 @@ class UserSchema(SQLModel, table=True):
 
     id: UUID = Field(primary_key=True, default_factory=uuid4)
     name: str
+    password: Optional[str] = Field(nullable=True)
     created_at: datetime = Field(default_factory=datetime.now)
 
     teams: List["TeamSchema"] = Relationship(
@@ -49,14 +56,26 @@ class UserSchema(SQLModel, table=True):
 
     @classmethod
     def from_create_model(cls, model: UserModel) -> "UserSchema":
-        return cls(name=model.name)
+        password: Optional[str] = None
+        if model.credentials:
+            password = model.credentials.hashed_password
+        return cls(name=model.name, password=password)
 
     def from_update_model(self, model: UserModel) -> "UserSchema":
         self.name = model.name
+        if model.credentials:
+            self.password = model.credentials.hashed_password
         return self
 
     def to_model(self) -> UserModel:
-        return UserModel(id=self.id, name=self.name, created_at=self.created_at)
+        return UserModel(
+            id=self.id,
+            name=self.name,
+            created_at=self.created_at,
+            credentials=UserCredentialsModel(
+                password=self.password, hashed=True
+            ),
+        )
 
 
 class TeamSchema(SQLModel, table=True):

@@ -19,8 +19,8 @@ from zenml.constants import PIPELINES, RUNS, VERSION_1
 from zenml.exceptions import NotAuthorizedError, ValidationError
 from zenml.models import PipelineRunModel
 from zenml.models.pipeline_models import PipelineModel
+from zenml.zen_server.auth import authorize
 from zenml.zen_server.utils import (
-    authorize,
     conflict,
     error_detail,
     error_response,

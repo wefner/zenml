@@ -17,8 +17,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from zenml.constants import OUTPUTS, STEPS, VERSION_1
 from zenml.models.pipeline_models import StepRunModel
+from zenml.zen_server.auth import authorize
 from zenml.zen_server.utils import (
-    authorize,
     error_detail,
     error_response,
     not_found,

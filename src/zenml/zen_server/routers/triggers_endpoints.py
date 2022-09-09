@@ -16,8 +16,8 @@
 # from fastapi import APIRouter, Depends, HTTPException
 
 # from zenml.constants import DEFAULT_STACK, RUNTIME_CONFIGURATION, TRIGGERS
+# from zenml.zen_server.auth import authorize
 # from zenml.zen_server.zen_server_api import (
-#     authorize,
 #     error_detail,
 #     error_response,
 #     zen_store,

@@ -38,8 +38,8 @@ from zenml.models import (
     ProjectModel,
     StackModel,
 )
+from zenml.zen_server.auth import authorize
 from zenml.zen_server.utils import (
-    authorize,
     conflict,
     error_detail,
     error_response,
