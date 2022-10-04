@@ -37,7 +37,6 @@ import time
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
 
-from zenml.constants import ENV_ZENML_SKIP_PIPELINE_REGISTRATION
 from zenml.environment import Environment
 from zenml.io import fileio
 from zenml.logger import get_logger
@@ -415,22 +414,14 @@ class AirflowOrchestrator(BaseOrchestrator):
 
         try:
             command = StandaloneCommand()
-            # Skip pipeline registration inside the airflow server process.
-            # When searching for DAGs, airflow imports the runner file in a
-            # randomly generated module. If we don't skip pipeline registration,
-            # it would fail by trying to register a pipeline with an existing
-            # name but different module sources for the steps.
-            with set_environment_variable(
-                key=ENV_ZENML_SKIP_PIPELINE_REGISTRATION, value="True"
-            ):
-                # Run the daemon with a working directory inside the current
-                # zenml repo so the same repo will be used to run the DAGs
-                daemon.run_as_daemon(
-                    command.run,
-                    pid_file=self.pid_file,
-                    log_file=self.log_file,
-                    working_directory=get_source_root_path(),
-                )
+            # Run the daemon with a working directory inside the current
+            # zenml repo so the same repo will be used to run the DAGs
+            daemon.run_as_daemon(
+                command.run,
+                pid_file=self.pid_file,
+                log_file=self.log_file,
+                working_directory=get_source_root_path(),
+            )
             while not self.is_running:
                 # Wait until the daemon started all the relevant airflow
                 # processes

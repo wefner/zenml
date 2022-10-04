@@ -682,3 +682,22 @@ def validate_config_source(
         )
 
     return config_class  # noqa
+
+
+def check_files_equal(file1: str, file2: str) -> bool:
+    """Checks if two files are equal.
+
+    This is the case if both files exist and have the same content.
+
+    Args:
+        file1: Path to first file.
+        file2: Path to second file.
+
+    Returns:
+        True if files are equal, False otherwise.
+    """
+    if not os.path.exists(file1) or not os.path.exists(file2):
+        return False
+
+    with open(file1, "rb") as f1, open(file2, "rb") as f2:
+        return f1.read() == f2.read()

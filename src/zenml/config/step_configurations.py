@@ -12,6 +12,7 @@
 #  or implied. See the License for the specific language governing
 #  permissions and limitations under the License.
 """Pipeline configuration classes."""
+import os
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional
 
 from zenml.config.base_settings import BaseSettings, SettingsOrDict
@@ -104,6 +105,39 @@ class StepSpec(StrictBaseModel):
         """
         _, class_name = self.source.rsplit(".", maxsplit=1)
         return class_name
+
+    def __eq__(self, other: Any) -> bool:
+        """Returns whether the other object is referring to the same step.
+
+        This is the case if the other objects is a `StepSpec` with the same
+        `upstream_steps` and a `source` that meets one of the following
+        conditions:
+            - it is the same as the `source` of this step
+            - it refers to the same absolute path as the `source` of this step
+            - it refers to a file which is identical to the file referred to by
+                the `source` of this step
+
+        Args:
+            other: The other object to compare to.
+
+        Returns:
+            True if the other object is referring to the same pipeline.
+        """
+        if isinstance(other, StepSpec):
+            if self.upstream_steps != other.upstream_steps:
+                return False
+
+            if self.source == other.source:
+                return True
+
+            if os.path.abspath(self.source).endswith(other.source):
+                return True
+
+            from zenml.utils.source_utils import check_files_equal
+
+            return check_files_equal(self.source, other.source)
+
+        return NotImplemented
 
 
 class Step(StrictBaseModel):

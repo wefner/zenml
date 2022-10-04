@@ -487,17 +487,12 @@ class BasePipeline(metaclass=BasePipelineMeta):
         pipeline_deployment = Compiler().compile(
             pipeline=self, stack=stack, run_configuration=run_config
         )
-
-        skip_pipeline_registration = constants.handle_bool_env_var(
-            constants.ENV_ZENML_SKIP_PIPELINE_REGISTRATION, default=False
-        )
         caching_status = (
             "enabled"
             if pipeline_deployment.pipeline.enable_cache
             else "disabled"
         )
-        register_pipeline = not (skip_pipeline_registration or unlisted)
-        if register_pipeline:
+        if not unlisted:
             step_specs = [
                 step.spec for step in pipeline_deployment.steps.values()
             ]
