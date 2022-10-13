@@ -33,6 +33,7 @@ from azureml.core.conda_dependencies import CondaDependencies
 
 import zenml
 from zenml.client import Client
+from zenml.config.pipeline_deployment import PipelineDeployment
 from zenml.constants import ENV_ZENML_CONFIG_PATH
 from zenml.environment import Environment as ZenMLEnvironment
 from zenml.integrations.azure.flavors.azureml_step_operator_flavor import (
@@ -53,6 +54,8 @@ if TYPE_CHECKING:
     from zenml.config.step_run_info import StepRunInfo
 
 logger = get_logger(__name__)
+
+ENV_ACTIVE_DEPLOYMENT = "ZENML_ACTIVE_DEPLOYMENT"
 
 
 class AzureMLStepOperator(BaseStepOperator):
@@ -114,6 +117,19 @@ class AzureMLStepOperator(BaseStepOperator):
                 service_principal_password=self.config.service_principal_password,
             )
         return None
+
+    def prepare_pipeline_deployment(
+        self, deployment: "PipelineDeployment", stack: "Stack"
+    ) -> None:
+        steps_to_run = [
+            step
+            for step in deployment.steps.values()
+            if step.config.step_operator == self.name
+        ]
+        if not steps_to_run:
+            return
+
+        os.environ[ENV_ZENML_CONFIG_PATH] = deployment.yaml()
 
     def _prepare_environment(
         self,
@@ -250,6 +266,12 @@ class AzureMLStepOperator(BaseStepOperator):
         )
 
         source_directory = get_source_root_path()
+        deployment = os.environ.get(ENV_ACTIVE_DEPLOYMENT)
+        deployment_path = os.path.join(source_directory, ".")
+        if deployment:
+            with open(deployment_path, "w") as f:
+                f.write(deployment)
+
         with _include_global_config(
             build_context_root=source_directory,
             load_config_path=PurePosixPath(
@@ -265,17 +287,21 @@ class AzureMLStepOperator(BaseStepOperator):
                 workspace=workspace, name=self.config.compute_target_name
             )
 
-            run_config = ScriptRunConfig(
-                source_directory=source_directory,
-                environment=environment,
-                compute_target=compute_target,
-                command=entrypoint_command,
-            )
+            try:
+                run_config = ScriptRunConfig(
+                    source_directory=source_directory,
+                    environment=environment,
+                    compute_target=compute_target,
+                    command=entrypoint_command,
+                )
 
-            experiment = Experiment(
-                workspace=workspace, name=info.pipeline.name
-            )
-            run = experiment.submit(config=run_config)
+                experiment = Experiment(
+                    workspace=workspace, name=info.pipeline.name
+                )
+                run = experiment.submit(config=run_config)
+            finally:
+                if deployment:
+                    os.remove(deployment_path)
 
         run.display_name = info.run_name
         run.wait_for_completion(show_output=True)
